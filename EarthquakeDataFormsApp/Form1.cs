@@ -1,27 +1,222 @@
 using System.Net;
 using System.Text;
-using System.Windows.Forms;
-using HtmlAgilityPack;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace EarthquakeDataFormsApp
 {
     public partial class Form1 : Form
     {
+        static string urlAFAD = "https://deprem.afad.gov.tr/last-earthquakes.html";
+        static string urlKandilli = "http://www.koeri.boun.edu.tr/scripts/lst4.asp";
+
+        const string DEFAULTURL = "https://deprem.afad.gov.tr/last-earthquakes.html";
+        const int DEFAULTMAXCOUNT = 20;
+        const int DEFAULTTMER = 5;
+
+        static string url = "";
+        static string urlHolder = "";
+        static int maxCount;
+        static int timeCount;
+        static int remainingSeconds;
+
         public Form1()
         {
             InitializeComponent();
-
+            SetDefault();
             GetData();
         }
 
-        static string urlAFAD = "https://deprem.afad.gov.tr/last-earthquakes.html";
-        static string urlKandilli = "http://www.koeri.boun.edu.tr/scripts/lst4.asp";
-        static string url = urlAFAD;
-        static string urlHolder = "";
-        static int maxCount = 10;
-        static int count = 1;
-        static int timeCount = 5;
+        private void SetDefault()
+        {
+            maxCount = DEFAULTMAXCOUNT;
+            timeCount = DEFAULTTMER;
+            url = DEFAULTURL;
+            urlHolder = DEFAULTURL;
+            remainingSeconds = timeCount;
+            timer1.Interval = 1000;
+            textBoxTimer.Text = DEFAULTTMER.ToString();
+            textBoxCount.Text = DEFAULTMAXCOUNT.ToString();
+            timerLabel.Text = $"Gelen Veri: {remainingSeconds} Saniye";
+        }
+
+        private void GetData()
+        {
+            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+            try
+            {
+                if (url == urlKandilli)
+                {
+                    GetKandilliData();
+                }
+                else if (url == urlAFAD)
+                {
+                    GetAFADData();
+                }
+            }
+            catch (Exception e)
+            {
+                StopTimer();
+                MessageBox.Show($"{e.Message}", "Uyarý", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            remainingSeconds--;
+
+            if (remainingSeconds <= 0)
+            {
+                GetData();
+                remainingSeconds = timeCount;
+            }
+
+            timerLabel.Text = $"Gelen Veri: {remainingSeconds} Saniye";
+        }
+
+        private void buttonDatas_Click(object sender, EventArgs e)
+        {
+            ActivateChanges();
+        }
+
+        private void GetAFADData()
+        {
+            List<InfoDataAfad> dataListAfad = new List<InfoDataAfad>();
+            WebClient client = new WebClient();
+
+            string htmlContent = "";
+            client.Encoding = Encoding.UTF8;
+            htmlContent = client.DownloadString(url);
+
+            HtmlAgilityPack.HtmlDocument document = new HtmlAgilityPack.HtmlDocument();
+            document.LoadHtml(htmlContent);
+
+            for (int i = 1; i <= maxCount; i++)
+            {
+                string xpathPrefix = $"/html/body/div[2]/table/tbody/tr[{i}]";
+                var tarihNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[1]");
+                var enlemNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[2]");
+                var boylamNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[3]");
+                var derinlikNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[4]");
+                var buyuklukNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[6]");
+                var yerNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[7]");
+
+                if (tarihNode != null && buyuklukNode != null && yerNode != null && enlemNode != null && boylamNode != null && derinlikNode != null)
+                {
+                    dataListAfad.Add(new InfoDataAfad
+                    {
+                        Tarih = tarihNode.InnerText.Trim(),
+                        Enlem = enlemNode.InnerText.Trim(),
+                        Boylam = boylamNode.InnerText.Trim(),
+                        Derinlik = derinlikNode.InnerText.Trim(),
+                        Buyukluk = buyuklukNode.InnerText.Trim(),
+                        Yer = yerNode.InnerText.Trim()
+                    });
+                }
+            }
+
+            dataGridView1.DataSource = dataListAfad;
+
+            var allCellsColumns = new[] { "Tarih", "Enlem", "Boylam", "Derinlik", "Buyukluk", };
+            foreach (var colName in allCellsColumns)
+            {
+                if (dataGridView1.Columns[colName] != null)
+                    dataGridView1.Columns[colName].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            }
+
+            if (dataGridView1.Columns["Yer"] != null)
+                dataGridView1.Columns["Yer"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+        }
+        private void GetKandilliData()
+        {
+            List<InfoDataKandilli> dataListKandilli = new List<InfoDataKandilli>();
+
+            WebClient client = new WebClient();
+
+            byte[] rawData = client.DownloadData(url);
+            string content = Encoding.GetEncoding("iso-8859-9").GetString(rawData);
+
+            HtmlAgilityPack.HtmlDocument kandilliDoc = new HtmlAgilityPack.HtmlDocument();
+            kandilliDoc.LoadHtml(content);
+
+            var preNode = kandilliDoc.DocumentNode.SelectSingleNode("//pre");
+            if (preNode != null)
+            {
+                var lines = preNode.InnerText.Split("Büyüklük")[1].Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(l => l.TrimEnd('\r'))
+                                .ToList();
+
+                var selectedLines = lines.Skip(1).Take(maxCount + 2);
+
+                int index = 0;
+                foreach (var line in selectedLines)
+                {
+                    if (index == 0)
+                    {
+                        index++;
+                        continue; // Ýlk satýrý atla
+                    }
+
+                    // Satýrlarý boþluklardan ayýr (birden fazla boþluk olabilir)
+                    var parts = System.Text.RegularExpressions.Regex.Split(line.Trim(), @"\s+");
+
+                    if (parts.Length >= 10)
+                    {
+                        dataListKandilli.Add(new InfoDataKandilli
+                        {
+                            Tarih = parts[0],
+                            Saat = parts[1],
+                            Enlem = parts[2],
+                            Boylam = parts[3],
+                            Derinlik = parts[4],
+                            MD = parts[5],
+                            ML = parts[6],
+                            Mw = parts[7],
+                            Yer = string.Join(" ", parts.Skip(8).Take(parts.Length - 9)),
+                            CozumNiteligi = parts.Last()
+                        });
+                    }
+                }
+
+                dataGridView1.DataSource = dataListKandilli;
+
+                if (dataGridView1.Columns["Yer"] != null)
+                {
+                    dataGridView1.Columns["Yer"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+                    dataGridView1.Columns["Yer"].MinimumWidth = 150;
+                }
+
+                var allCellsColumns = new[] { "Tarih", "Saat", "Enlem", "Boylam", "Derinlik", "MD", "ML", "Mw", "CozumNiteligi" };
+                foreach (var colName in allCellsColumns)
+                {
+                    if (dataGridView1.Columns[colName] != null)
+                        dataGridView1.Columns[colName].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+                }
+            }
+        }
+
+        private void ActivateChanges()
+        {
+            url = urlHolder;
+            maxCount = textBoxCount.Text != "" ? Int32.Parse(textBoxCount.Text) : DEFAULTMAXCOUNT;
+            textBoxCount.Text = maxCount.ToString();
+            timeCount = textBoxTimer.Text != "" ? Int32.Parse(textBoxTimer.Text) : DEFAULTTMER;
+            textBoxTimer.Text = timeCount.ToString();
+            timer1.Interval = 1000;
+            remainingSeconds = timeCount;
+            timerLabel.Text = $"Gelen Veri: {remainingSeconds} Saniye";
+            GetData();
+        }
+
+        private void buttonTimer_Click(object sender, EventArgs e)
+        {
+            if (timer1.Enabled)
+            {
+                StopTimer();
+            }
+            else
+            {
+                StartTimer();
+            }
+        }
 
         private void radioButtonAfad_CheckedChanged(object sender, EventArgs e)
         {
@@ -33,129 +228,22 @@ namespace EarthquakeDataFormsApp
             urlHolder = urlKandilli;
         }
 
-        private void GetData()
+        private void StopTimer()
         {
-            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-
-            if (url != "")
-            {
-                List<InfoData> dataList = new List<InfoData>();
-                count = 1;
-
-                WebClient client = new WebClient();
-
-                string htmlContent = "";
-
-                if (url == urlKandilli)
-                {
-                    byte[] rawData = client.DownloadData(url);
-                    htmlContent = Encoding.GetEncoding("iso-8859-9").GetString(rawData); // DÜZGÜN çöz
-                }
-                else if (url == urlAFAD)
-                {
-                    client.Encoding = Encoding.UTF8;
-                    htmlContent = client.DownloadString(url);
-                }
-
-                HtmlAgilityPack.HtmlDocument document = new HtmlAgilityPack.HtmlDocument();
-                document.LoadHtml(htmlContent);
-
-                if (url == urlKandilli)
-                {
-                    byte[] rawData = client.DownloadData(url);
-                    string content = Encoding.GetEncoding("iso-8859-9").GetString(rawData);
-
-                    HtmlAgilityPack.HtmlDocument kandilliDoc = new HtmlAgilityPack.HtmlDocument();
-                    kandilliDoc.LoadHtml(content);
-
-                    var preNode = kandilliDoc.DocumentNode.SelectSingleNode("//pre");
-                    if (preNode != null)
-                    {
-                        var lines = preNode.InnerText.Split("Büyüklük")[1].Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                                        .Select(l => l.TrimEnd('\r'))
-                                        .ToList();
-
-                        int headerLines = 6; // Ýlk 6 satýr baþlýk ve açýklama satýrlarý
-                        var selectedLines = lines.Skip(0).Take(headerLines + maxCount); // 6 baþlýk satýrý + maxCount kadar veri
-
-                        richTextBox1.Clear();
-                        foreach (var line in selectedLines)
-                        {
-                            richTextBox1.Text += line + "\n";
-                        }
-                    }
-                }
-
-
-                else if (url == urlAFAD)
-                {
-                    for (int i = 1; i <= maxCount; i++)
-                    {
-                        string xpathPrefix = $"/html/body/div[2]/table/tbody/tr[{i}]";
-                        var tarihNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[1]");
-                        var enlemNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[2]");
-                        var boylamNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[3]");
-                        var derinlikNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[4]");
-                        var buyuklukNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[6]");
-                        var yerNode = document.DocumentNode.SelectSingleNode($"{xpathPrefix}/td[7]");
-
-                        if (tarihNode != null && buyuklukNode != null && yerNode != null && enlemNode != null && boylamNode != null && derinlikNode != null)
-                        {
-                            dataList.Add(new InfoData
-                            {
-                                id = count++,
-                                Tarih = tarihNode.InnerText.Trim(),
-                                Enlem = enlemNode.InnerText.Trim(),
-                                Boylam = boylamNode.InnerText.Trim(),
-                                Derinlik = derinlikNode.InnerText.Trim(),
-                                Buyukluk = buyuklukNode.InnerText.Trim(),
-                                Yer = yerNode.InnerText.Trim()
-                            });
-                        }
-                    }
-
-                    richTextBox1.Clear();
-                    foreach (var item in dataList.OrderBy(d => d.id))
-                    {
-                        richTextBox1.Text += item.ToInfoString() + "\n";
-                    }
-                }
-            }
+            timer1.Stop();
+            buttonTimer.Text = "Sayacý Baþlat";
+            buttonTimer.BackColor = Color.MediumSeaGreen;
         }
 
-        private void timer1_Tick(object sender, EventArgs e)
+        private void StartTimer()
         {
-            GetData();
-        }
-
-        private void buttonDatas_Click(object sender, EventArgs e)
-        {
-            url = urlHolder;
-            maxCount = textBoxCount.Text != "" ? Int32.Parse(textBoxCount.Text) : 10;
-            textBoxCount.Text = "10";
-            timeCount = textBoxTimer.Text != "" ? Int32.Parse(textBoxTimer.Text) : 5;
-            textBoxTimer.Text = "5";
-            timer1.Interval = timeCount * 1000;
-            GetData();
-        }
-
-        private void buttonTimer_Click(object sender, EventArgs e)
-        {
-            if (timer1.Enabled)
-            { 
-                timer1.Stop();
-                buttonTimer.Text = "Sayacý Baþlat";
-            }
-            else
-            { 
-                timer1.Start();
-                buttonTimer.Text = "Sayacý Durdur";
-            }
+            timer1.Start();
+            buttonTimer.Text = "Sayacý Durdur";
+            buttonTimer.BackColor = Color.LightCoral;
         }
 
         private void textBox_KeyPress(object sender, KeyPressEventArgs e)
         {
-            // Sadece rakamlara ve kontrol karakterlerine (örneðin Backspace) izin ver
             if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
             {
                 e.Handled = true;
@@ -170,7 +258,13 @@ namespace EarthquakeDataFormsApp
                 {
                     MessageBox.Show("500'den büyük deðer girilemez.", "Uyarý", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     textBoxCount.Text = "500";
-                    textBoxCount.SelectionStart = textBoxCount.Text.Length; // Ýmleci sona al
+                    textBoxCount.SelectionStart = textBoxCount.Text.Length;
+                }
+                if (value < 1)
+                {
+                    MessageBox.Show("1'den küçük deðer girilemez.", "Uyarý", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    textBoxCount.Text = "1";
+                    textBoxCount.SelectionStart = textBoxCount.Text.Length;
                 }
             }
         }
