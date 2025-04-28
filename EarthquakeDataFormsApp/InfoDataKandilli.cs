@@ -16,8 +16,5 @@ namespace EarthquakeDataFormsApp
         public string ML { get; set; }
         public string Mw { get; set; }
 
-        [DisplayName("Çözüm Niteliği")]
-        public string CozumNiteligi { get; set; }
-
     }
 }

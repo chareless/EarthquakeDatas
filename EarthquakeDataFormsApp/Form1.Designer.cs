@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             label1 = new Label();
             radioButtonAfad = new RadioButton();
             radioButtonKandilli = new RadioButton();
@@ -41,7 +42,12 @@
             buttonTimer = new Button();
             dataGridView1 = new DataGridView();
             timerLabel = new Label();
+            toolStrip1 = new ToolStrip();
+            toolStripButtonAbout = new ToolStripButton();
+            toolStripButtonUpdate = new ToolStripButton();
+            toolStripButtonContact = new ToolStripButton();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
+            toolStrip1.SuspendLayout();
             SuspendLayout();
             // 
             // label1
@@ -167,11 +173,51 @@
             timerLabel.TabIndex = 12;
             timerLabel.Text = "Gelen Veri: 0 Saniye";
             // 
+            // toolStrip1
+            // 
+            toolStrip1.Items.AddRange(new ToolStripItem[] { toolStripButtonAbout, toolStripButtonUpdate, toolStripButtonContact });
+            toolStrip1.Location = new Point(0, 0);
+            toolStrip1.Name = "toolStrip1";
+            toolStrip1.Size = new Size(1386, 25);
+            toolStrip1.TabIndex = 13;
+            toolStrip1.Text = "toolStrip1";
+            // 
+            // toolStripButtonAbout
+            // 
+            toolStripButtonAbout.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            toolStripButtonAbout.Image = (Image)resources.GetObject("toolStripButtonAbout.Image");
+            toolStripButtonAbout.ImageTransparentColor = Color.Magenta;
+            toolStripButtonAbout.Name = "toolStripButtonAbout";
+            toolStripButtonAbout.Size = new Size(61, 22);
+            toolStripButtonAbout.Text = "Hakkında";
+            toolStripButtonAbout.Click += toolStripButtonAbout_Click;
+            // 
+            // toolStripButtonUpdate
+            // 
+            toolStripButtonUpdate.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            toolStripButtonUpdate.Image = (Image)resources.GetObject("toolStripButtonUpdate.Image");
+            toolStripButtonUpdate.ImageTransparentColor = Color.Magenta;
+            toolStripButtonUpdate.Name = "toolStripButtonUpdate";
+            toolStripButtonUpdate.Size = new Size(133, 22);
+            toolStripButtonUpdate.Text = "Güncellemeleri Denetle";
+            toolStripButtonUpdate.Click += toolStripButtonUpdate_Click;
+            // 
+            // toolStripButtonContact
+            // 
+            toolStripButtonContact.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            toolStripButtonContact.Image = (Image)resources.GetObject("toolStripButtonContact.Image");
+            toolStripButtonContact.ImageTransparentColor = Color.Magenta;
+            toolStripButtonContact.Name = "toolStripButtonContact";
+            toolStripButtonContact.Size = new Size(72, 22);
+            toolStripButtonContact.Text = "Sorun Bildir";
+            toolStripButtonContact.Click += toolStripButtonContact_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1386, 607);
+            Controls.Add(toolStrip1);
             Controls.Add(timerLabel);
             Controls.Add(buttonTimer);
             Controls.Add(buttonDatas);
@@ -188,6 +234,8 @@
             Name = "Form1";
             Text = "Earthquake Monitor";
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
+            toolStrip1.ResumeLayout(false);
+            toolStrip1.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -205,5 +253,9 @@
         private Button buttonTimer;
         private DataGridView dataGridView1;
         private Label timerLabel;
+        private ToolStrip toolStrip1;
+        private ToolStripButton toolStripButtonAbout;
+        private ToolStripButton toolStripButtonUpdate;
+        private ToolStripButton toolStripButtonContact;
     }
 }

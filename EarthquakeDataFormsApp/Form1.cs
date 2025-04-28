@@ -1,5 +1,7 @@
+using HtmlAgilityPack;
 using System.Net;
 using System.Text;
+using static System.Net.WebRequestMethods;
 
 namespace EarthquakeDataFormsApp
 {
@@ -11,6 +13,7 @@ namespace EarthquakeDataFormsApp
         const string DEFAULTURL = "https://deprem.afad.gov.tr/last-earthquakes.html";
         const int DEFAULTMAXCOUNT = 20;
         const int DEFAULTTMER = 5;
+        const string currentVersion = "1.0";
 
         static string url = "";
         static string urlHolder = "";
@@ -170,8 +173,7 @@ namespace EarthquakeDataFormsApp
                             MD = parts[5],
                             ML = parts[6],
                             Mw = parts[7],
-                            Yer = string.Join(" ", parts.Skip(8).Take(parts.Length - 9)),
-                            CozumNiteligi = parts.Last()
+                            Yer = string.Join(" ", parts.Skip(8).Take(parts.Length - 8)),
                         });
                     }
                 }
@@ -267,6 +269,84 @@ namespace EarthquakeDataFormsApp
                     textBoxCount.SelectionStart = textBoxCount.Text.Length;
                 }
             }
+        }
+
+        private void CheckUpdate()
+        {
+            try
+            {
+                Uri url = new Uri("https://chareless.github.io/saribayirdeniz/earthquakemonitor.html");
+                WebClient client = new WebClient();
+                client.Encoding = Encoding.UTF8;
+                string html = client.DownloadString(url);
+                HtmlAgilityPack.HtmlDocument dokuman = new HtmlAgilityPack.HtmlDocument();
+                dokuman.LoadHtml(html);
+                HtmlNodeCollection titles = dokuman.DocumentNode.SelectNodes("/html/body/div/div/div[2]/div/div/div/div/div[2]/div[2]/div/div/p[5]/h7");
+                string version = "";
+                foreach (HtmlNode title in titles)
+                {
+                    version = title.InnerText;
+                }
+
+                if (version == currentVersion)
+                {
+                    MessageBox.Show("Sürüm Güncel", "Güncellemeleri Denetle", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    DialogResult result = MessageBox.Show("Güncelleme Mevcut. Yeni Sürümü Ýndirmek Ýster Misiniz?", "Güncellemeleri Denetle",
+                        MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
+
+                    if (result == DialogResult.OK)
+                    {
+                        try
+                        {
+                            System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = "https://github.com/chareless/EarthquakeMonitor-for-Windows/archive/master.zip",
+                                UseShellExecute = true
+                            };
+                            System.Diagnostics.Process.Start(psi);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Ýndirme sýrasýnda bir hata oluþtu: " + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+
+                }
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Güncel Sürüm Bulunurken Hata!", "Uyarý", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void toolStripButtonContact_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://chareless.github.io/saribayirdeniz/#contact",
+                    UseShellExecute = true
+                };
+                System.Diagnostics.Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Site Açýlamadý: " + ex.Message);
+            }
+        }
+
+        private void toolStripButtonUpdate_Click(object sender, EventArgs e)
+        {
+            CheckUpdate();
+        }
+
+        private void toolStripButtonAbout_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
