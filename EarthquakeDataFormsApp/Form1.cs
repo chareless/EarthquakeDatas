@@ -1,7 +1,6 @@
 using HtmlAgilityPack;
 using System.Net;
 using System.Text;
-using static System.Net.WebRequestMethods;
 
 namespace EarthquakeDataFormsApp
 {
@@ -9,11 +8,6 @@ namespace EarthquakeDataFormsApp
     {
         static string urlAFAD = "https://deprem.afad.gov.tr/last-earthquakes.html";
         static string urlKandilli = "http://www.koeri.boun.edu.tr/scripts/lst4.asp";
-
-        const string DEFAULTURL = "https://deprem.afad.gov.tr/last-earthquakes.html";
-        const int DEFAULTMAXCOUNT = 20;
-        const int DEFAULTTMER = 5;
-        const string currentVersion = "1.0";
 
         static string url = "";
         static string urlHolder = "";
@@ -30,14 +24,14 @@ namespace EarthquakeDataFormsApp
 
         private void SetDefault()
         {
-            maxCount = DEFAULTMAXCOUNT;
-            timeCount = DEFAULTTMER;
-            url = DEFAULTURL;
-            urlHolder = DEFAULTURL;
+            maxCount = General.DEFAULTMAXCOUNT;
+            timeCount = General.DEFAULTTMER;
+            url = General.DEFAULTURL;
+            urlHolder = General.DEFAULTURL;
             remainingSeconds = timeCount;
             timer1.Interval = 1000;
-            textBoxTimer.Text = DEFAULTTMER.ToString();
-            textBoxCount.Text = DEFAULTMAXCOUNT.ToString();
+            textBoxTimer.Text = General.DEFAULTTMER.ToString();
+            textBoxCount.Text = General.DEFAULTMAXCOUNT.ToString();
             timerLabel.Text = $"Gelen Veri: {remainingSeconds} Saniye";
         }
 
@@ -198,9 +192,9 @@ namespace EarthquakeDataFormsApp
         private void ActivateChanges()
         {
             url = urlHolder;
-            maxCount = textBoxCount.Text != "" ? Int32.Parse(textBoxCount.Text) : DEFAULTMAXCOUNT;
+            maxCount = textBoxCount.Text != "" ? Int32.Parse(textBoxCount.Text) : General.DEFAULTMAXCOUNT;
             textBoxCount.Text = maxCount.ToString();
-            timeCount = textBoxTimer.Text != "" ? Int32.Parse(textBoxTimer.Text) : DEFAULTTMER;
+            timeCount = textBoxTimer.Text != "" ? Int32.Parse(textBoxTimer.Text) : General.DEFAULTTMER;
             textBoxTimer.Text = timeCount.ToString();
             timer1.Interval = 1000;
             remainingSeconds = timeCount;
@@ -288,7 +282,7 @@ namespace EarthquakeDataFormsApp
                     version = title.InnerText;
                 }
 
-                if (version == currentVersion)
+                if (version == General.VERSION)
                 {
                     MessageBox.Show("Sürüm Güncel", "Güncellemeleri Denetle", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -346,7 +340,8 @@ namespace EarthquakeDataFormsApp
 
         private void toolStripButtonAbout_Click(object sender, EventArgs e)
         {
-
+            About about = new About();
+            about.Show();
         }
     }
 }
